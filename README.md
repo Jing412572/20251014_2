@@ -11,23 +11,13 @@ let explosionFrame = 0;
 let explosionDelay = 60; // 爆破延遲幀數
 let bubbleExplosions = []; // 新增泡泡爆破資料
 let explosionInterval = 120; // 每隔多少幀爆破一次
-let popSound;
-let score = 0; // 新增分數變數
-let timer = 60; // 倒數秒數
-let startTime;
-let gameOver = false;
-
-function preload() {
-  popSound = loadSound('balloon-pop.mp3');
-}
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
+  // 你的初始化程式碼可放這裡
   circleR = 60;
   circleX = width / 2;
   circleY = height - circleR / 2;
-
-  startTime = millis(); // 記錄開始時間
 
   for(let i=0;i<30;i++){
     bgCircles.push({
@@ -50,107 +40,139 @@ function draw() {
   background('#bde0fe');
   noStroke();
 
-  // 計算剩餘秒數
-  if (!gameOver) {
-    let elapsed = int((millis() - startTime) / 1000);
-    let remain = timer - elapsed;
-    if (remain <= 0) {
-      remain = 0;
-      gameOver = true;
+  // 背景圓持續往上飄
+  for(let i=0;i<bgCircles.length;i++){
+    let c = bgCircles[i];
+    fill(c.color, c.alpha);
+    ellipse(c.x, c.y, c.r, c.r);
+
+    // 原本右上方的方框改為星星
+    let squareSize = c.r / 4;
+    let offset = c.r / 4;
+    let starX = c.x + offset;
+    let starY = c.y - offset;
+    drawStar(starX, starY, squareSize / 2, squareSize / 4, 5);
+
+    // 左上方星星裝飾（移除）
+    // let starOffset = c.r / 4;
+    // let starLX = c.x - starOffset;
+    // let starLY = c.y - starOffset;
+    // drawStar(starLX, starLY, squareSize / 2, squareSize / 4, 5);
+
+    // 移除星星噴出的程式碼，只保留圓的爆破
+    // for(let j=0;j<c.stars.length;j++){
+    //   let s = c.stars[j];
+    //   let sx = c.x + cos(s.angle) * s.dist;
+    //   let sy = c.y + sin(s.angle) * s.dist;
+    //   drawStar(sx, sy, s.size, s.size/2, 5);
+
+    //   s.dist += s.speed;
+    //   if(s.dist > c.r/2){
+    //     s.dist = 0;
+    //     s.angle = random(TWO_PI);
+    //     s.speed = random(2, 5);
+    //     s.size = random(8, 16);
+    //   }
+    // }
+
+    c.y -= 1.2;
+    if(c.y < -c.r/2){
+      // 泡泡到頂端，產生爆破圓
+      bubbleExplosions.push({
+        x: c.x,
+        y: 0,
+        r: c.r,
+        frame: 0,
+        circles: Array.from({length: 8}, () => ({
+          angle: random(TWO_PI),
+          dist: 0,
+          speed: random(3, 7),
+          size: random(20, 40),
+          color: color(random(255), random(255), random(255)),
+          alpha: 255
+        }))
+      });
+      c.y = height + c.r/2;
     }
-
-    // 左上角文字
-    textSize(24);
-    let gradColor1 = lerpColor(color('#3399ff'), color('#87ceeb'), 0.3);
-    let gradColor2 = lerpColor(color('#3399ff'), color('#87ceeb'), 0.7);
-
-    fill(gradColor1);
-    text('414730779', 20, 30);
-
-    fill(gradColor2);
-    text('得分：' + score, 20, 60);
-
-    // 顯示倒數計時（橘色）
-    fill(255, 140, 0);
-    text('倒數：' + remain + ' 秒', 20, 90);
-
-    // 背景圓持續往上飄
-    for(let i=0;i<bgCircles.length;i++){
-      let c = bgCircles[i];
-      fill(c.color, c.alpha);
-      ellipse(c.x, c.y, c.r, c.r);
-
-      let squareSize = c.r / 4;
-      let offset = c.r / 4;
-      let starX = c.x + offset;
-      let starY = c.y - offset;
-      drawStar(starX, starY, squareSize / 2, squareSize / 4, 5);
-
-      c.y -= 1.2;
-      if(c.y < -c.r/2){
-        bubbleExplosions.push({
-          x: c.x,
-          y: 0,
-          r: c.r,
-          frame: 0,
-          circles: Array.from({length: 8}, () => ({
-            angle: random(TWO_PI),
-            dist: 0,
-            speed: random(3, 7),
-            size: random(20, 40),
-            color: color(random(255), random(255), random(255)),
-            alpha: 255
-          }))
-        });
-        c.y = height + c.r/2;
-      }
-    }
-
-    // 泡泡爆破動畫
-    for(let i=bubbleExplosions.length-1; i>=0; i--){
-      let be = bubbleExplosions[i];
-      for(let j=0;j<be.circles.length;j++){
-        let s = be.circles[j];
-        let sx = be.x + cos(s.angle) * s.dist;
-        let sy = be.y + sin(s.angle) * s.dist;
-        fill(s.color, s.alpha);
-        ellipse(sx, sy, s.size, s.size);
-        s.dist += s.speed;
-        s.alpha -= 8;
-      }
-      be.frame++;
-      if(be.frame > 30){
-        bubbleExplosions.splice(i, 1);
-      }
-    }
-
-    if (explosionTriggered) {
-      for(let i=0;i<explosionCircles.length;i++){
-        let ec = explosionCircles[i];
-        let ex = explosionCenter.x + cos(ec.angle) * ec.dist;
-        let ey = explosionCenter.y + sin(ec.angle) * ec.dist;
-        fill(ec.color, ec.alpha);
-        ellipse(ex, ey, ec.r, ec.r);
-
-        ec.dist += ec.speed;
-        ec.alpha -= 6;
-      }
-      explosionFrame++;
-      if (explosionFrame > 60) {
-        explosionTriggered = false;
-      }
-    }
-  } else {
-    // 遊戲結束畫面
-    background('#bde0fe');
-    textAlign(CENTER, CENTER);
-    textSize(40);
-    fill('#3399ff');
-    text('遊戲結束！', width/2, height/2 - 40);
-    fill('#87ceeb');
-    text('你的得分：' + score, width/2, height/2 + 20);
-    textAlign(LEFT, BASELINE); // 恢復預設
   }
+
+  // 泡泡爆破動畫（只畫圓，不畫星星）
+  for(let i=bubbleExplosions.length-1; i>=0; i--){
+    let be = bubbleExplosions[i];
+    for(let j=0;j<be.circles.length;j++){
+      let s = be.circles[j];
+      let sx = be.x + cos(s.angle) * s.dist;
+      let sy = be.y + sin(s.angle) * s.dist;
+      fill(s.color, s.alpha);
+      ellipse(sx, sy, s.size, s.size);
+      s.dist += s.speed;
+      s.alpha -= 8;
+    }
+    be.frame++;
+    // 爆破動畫結束後移除
+    if(be.frame > 30){
+      bubbleExplosions.splice(i, 1);
+    }
+  }
+
+  // 爆破效果（每隔 explosionInterval 幀觸發，位置亂數）
+  if (frameCount % explosionInterval === 0) {
+    explosionTriggered = true;
+    explosionFrame = 0;
+    explosionCenter = {
+      x: random(width * 0.2, width * 0.8),
+      y: random(height * 0.2, height * 0.8)
+    };
+    // 重新產生爆破圓
+    explosionCircles = [];
+    for(let i=0;i<20;i++){
+      let angle = random(TWO_PI);
+      explosionCircles.push({
+        x: explosionCenter.x,
+        y: explosionCenter.y,
+        r: random(30, 80),
+        color: color(random(255), random(255), random(255)),
+        angle: angle,
+        speed: random(4, 8),
+        dist: 0,
+        alpha: 255
+      });
+    }
+  }
+
+  if (explosionTriggered) {
+    for(let i=0;i<explosionCircles.length;i++){
+      let ec = explosionCircles[i];
+      let ex = explosionCenter.x + cos(ec.angle) * ec.dist;
+      let ey = explosionCenter.y + sin(ec.angle) * ec.dist;
+      fill(ec.color, ec.alpha);
+      ellipse(ex, ey, ec.r, ec.r);
+
+      ec.dist += ec.speed;
+      ec.alpha -= 6;
+    }
+    explosionFrame++;
+    if (explosionFrame > 60) {
+      explosionTriggered = false;
+    }
+  }
+
+    // --- 在畫面下方畫主要圓，並在圓的左上方加一顆星星 ---
+    // 畫主要圓
+    push();
+    stroke(0, 120);
+    strokeWeight(2);
+    fill('#ffd6a5');
+    ellipse(circleX, circleY, circleR * 2, circleR * 2);
+    pop();
+
+    // 在圓的左上方畫星星（以 45 度角偏移）
+    let starOffset = circleR * 0.9; // 星星距離圓心的距離
+    let angle45 = PI / 4;
+    let starX = circleX - cos(angle45) * starOffset;
+    let starY = circleY - sin(angle45) * starOffset;
+    // 星星大小相對於圓的半徑
+    drawStar(starX, starY, circleR * 0.45, circleR * 0.2, 5);
 }
 
 // 畫星星的函數
@@ -171,43 +193,26 @@ function drawStar(x, y, radius1, radius2, npoints) {
 }
 
 function mousePressed() {
-  let hit = false;
-  for(let i=0; i<bgCircles.length; i++){
-    let c = bgCircles[i];
-    let d = dist(mouseX, mouseY, c.x, c.y);
-    if(d < c.r/2){
-      // 點到氣球
-      explosionTriggered = true;
-      explosionFrame = 0;
-      explosionCenter = { x: c.x, y: c.y };
-      // 播放音效
-      if (popSound) popSound.play();
-      // 重新產生爆破圓
-      explosionCircles = [];
-      for(let j=0;j<20;j++){
-        let angle = random(TWO_PI);
-        explosionCircles.push({
-          x: explosionCenter.x,
-          y: explosionCenter.y,
-          r: random(30, 80),
-          color: color(random(255), random(255), random(255)),
-          angle: angle,
-          speed: random(4, 8),
-          dist: 0,
-          alpha: 255
-        });
-      }
-      score++; // 得分加一
-      // 讓氣球消失（重設到畫面下方）
-      c.y = height + c.r/2;
-      hit = true;
-      break; // 只爆破一顆
-    }
-  }
-  // 如果沒點到氣球，則扣分
-  if (!hit) {
-    score--; // 扣分
-    if (score < 0) score = 0; // 分數不低於0
+  explosionTriggered = true;
+  explosionFrame = 0;
+  explosionCenter = {
+    x: mouseX,
+    y: mouseY
+  };
+  // 重新產生爆破圓
+  explosionCircles = [];
+  for(let i=0;i<20;i++){
+    let angle = random(TWO_PI);
+    explosionCircles.push({
+      x: explosionCenter.x,
+      y: explosionCenter.y,
+      r: random(30, 80),
+      color: color(random(255), random(255), random(255)),
+      angle: angle,
+      speed: random(4, 8),
+      dist: 0,
+      alpha: 255
+    });
   }
 }
 
